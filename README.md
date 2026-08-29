@@ -107,8 +107,8 @@ node scripts/e2e-fullstack-test.mjs  # 管理配置炸弹局 / 注册存档 / �
 
 ```bash
 # 1) 数据库：Neon（免费）或 Supabase 建一个 Postgres，复制连接串
-# 2) 应用 DDL（建表），在本地任意位置执行：
-npx prisma db execute --schema prisma/schema.postgres.prisma --url "$DATABASE_URL" --file prisma/prod-schema.sql
+# 2) 应用 DDL（建表）—— 注意：Neon 代理不支持单次多语句，脚本会逐条执行：
+DATABASE_URL="$DATABASE_URL" node scripts/apply-prod-schema.mjs
 # 3) 写入成就与默认难度配置（可选但推荐）：
 DATABASE_URL="$DATABASE_URL" npx tsx prisma/seed-prod.ts
 ```
