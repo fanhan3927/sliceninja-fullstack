@@ -103,24 +103,31 @@ node scripts/e2e-fullstack-test.mjs  # 管理配置炸弹局 / 注册存档 / �
 
 ## 部署到 Vercel（生产）
 
-1. 数据库：Vercel + Neon 等托管 Postgres，建库后拿到连接串。
-2. `prisma/schema.prisma` 把 datasource 改为 PostgreSQL（业务代码无需改动）：
-   ```prisma
-   datasource db {
-     provider = "postgresql"   // 原 sqlite
-     url      = env("DATABASE_URL")
-   }
-   ```
-3. 本地生成迁移：`npx prisma migrate dev --name prod_ready`（provider 变更会重新生成迁移），提交 `prisma/migrations`。
-4. Vercel 项目设置环境变量：
-   - `DATABASE_URL=postgresql://...`（生产库）
-   - `AUTH_SECRET=<openssl rand -base64 32>`（强随机，切勿用 dev 值）
-   - `AUTH_URL=https://你的域名`（Vercel 会自动注入 `AUTH_TRUST_HOST=true`）
-5. 构建命令 `npm run build`（`next build --turbopack` 已验证可出包），Node 版本 ≥ 20。
-6. 部署后在服务器跑一次迁移：`npx prisma migrate deploy`（或 Vercel Post Deploy Hook）。
-7. `public/audio` 与 `public/images` 随静态资源自动走 CDN，无需额外配置。
+仓库已内置生产就绪文件：`vercel.json`（构建命令自动用 Postgres schema 生成 Prisma Client）、`prisma/schema.postgres.prisma`（由 `scripts/gen-postgres-schema.mjs` 从 SQLite schema 生成，模型一致）、`prisma/prod-schema.sql`（Postgres DDL）、`prisma/seed-prod.ts`（只写成就与默认配置，不建任何账号）。
 
-> SQLite 仅限本地开发；生产务必切换 Postgres，且 `AUTH_SECRET` 用随机值。
+```bash
+# 1) 数据库：Neon（免费）或 Supabase 建一个 Postgres，复制连接串
+# 2) 应用 DDL（建表），在本地任意位置执行：
+npx prisma db execute --schema prisma/schema.postgres.prisma --url "$DATABASE_URL" --file prisma/prod-schema.sql
+# 3) 写入成就与默认难度配置（可选但推荐）：
+DATABASE_URL="$DATABASE_URL" npx tsx prisma/seed-prod.ts
+```
+
+Vercel 项目设置：
+
+1. Import 仓库 `sliceninja-fullstack`（框架自动识别 Next.js；`vercel.json` 已配置构建命令与 `hkg1` 区域）。
+2. 环境变量：
+   - `DATABASE_URL=postgresql://...`（生产库，Schema 已就绪）
+   - `AUTH_SECRET=<openssl rand -base64 32>`（强随机，切勿用 dev 值）
+   - `AUTH_URL=https://<你的项目>.vercel.app`
+   - `AUTH_TRUST_HOST=true`
+3. 部署。登录注册走 `User` 表；`public/audio`、`public/images` 由 Vercel CDN 自动分发。
+
+> 变更本地 SQLite schema 后，重新生成生产文件：
+> `node scripts/gen-postgres-schema.mjs && npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.postgres.prisma --script > prisma/prod-schema.sql`
+> 注意：重新生成 DDL 是「从空库」全量脚本，仅适用于首次建库或可重建的生产库；已有数据的库请自行编写增量迁移。
+
+> SQLite 仅限本地开发；生产用 Postgres，`AUTH_SECRET` 用随机值，且绝不执行 `db:seed`（默认密码仅本地）。
 
 ## 安全注意
 
