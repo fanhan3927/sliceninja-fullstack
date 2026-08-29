@@ -49,7 +49,6 @@ yarn-error.log*
 next-env.d.ts
 .gstack/
 
-# credentials file (user-provided, never commit)
 /����ƾ��.txt
 .vercel
 .env*
