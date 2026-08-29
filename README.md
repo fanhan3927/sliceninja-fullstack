@@ -103,7 +103,7 @@ node scripts/e2e-fullstack-test.mjs  # 管理配置炸弹局 / 注册存档 / �
 
 ## 部署到 Vercel（生产）
 
-已上线示例：https://sliceninja-fullstack-fanhan3927-7597s-projects.vercel.app
+已上线示例：https://sliceninja-fullstack.vercel.app
 
 仓库已内置生产就绪文件：`vercel.json`（构建命令自动用 Postgres schema 生成 Prisma Client）、`prisma/schema.postgres.prisma`（由 `scripts/gen-postgres-schema.mjs` 从 SQLite schema 生成，模型一致）、`prisma/prod-schema.sql`（Postgres DDL）、`prisma/seed-prod.ts`（只写成就与默认配置，不建任何账号）、`scripts/apply-prod-schema.mjs`（逐条应用 DDL，兼容 Neon 代理）。
 
