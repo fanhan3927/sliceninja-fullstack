@@ -1,0 +1,89 @@
+// SliceNinja 数据模型 —— 与 TECH_DESIGN.md 保持一致
+// 数据库变更只走 prisma migrate；SQLite 仅本地开发，生产可切 PostgreSQL（provider 换 postgresql）
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum EndReason {
+  MISS
+  BOMB
+  QUIT
+}
+
+model User {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String?
+  image        String?
+  role         Role              @default(USER)
+  createdAt    DateTime          @default(now())
+  sessions     GameSession[]
+  preference   Preference?
+  achievements UserAchievement[]
+}
+
+model Preference {
+  id       String  @id @default(cuid())
+  userId   String  @unique
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bgmMuted Boolean @default(false)
+  sfxMuted Boolean @default(false)
+}
+
+model GameSession {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score          Int
+  maxCombo       Int
+  levelReached   Int
+  fruitsSliced   Int
+  fruitsMissed   Int
+  bombsHit       Int       @default(0)
+  durationMs     Int
+  endedReason    EndReason
+  clientChecksum String? // 简单防篡改签名（预留）
+  createdAt      DateTime  @default(now())
+
+  @@index([score, createdAt]) // 排行榜：按最高分取最早达成
+  @@index([userId, createdAt]) // 个人历史：最近 N 局
+}
+
+model Achievement {
+  id          String            @id @default(cuid())
+  key         String            @unique
+  title       String
+  description String
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+model GameConfig {
+  id        String   @id @default("default")
+  version   Int      @default(1)
+  json      String // DifficultyConfig JSON
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
